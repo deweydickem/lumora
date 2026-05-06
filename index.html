@@ -3246,7 +3246,7 @@ window._FT=[];
 
 <script>
 // Force-clear all service worker caches and unregister stale workers
-window._LUMORA_CACHE_V='v129';
+window._LUMORA_CACHE_V='v130';
 if('serviceWorker' in navigator){
   navigator.serviceWorker.getRegistrations().then(function(regs){
     regs.forEach(function(r){r.unregister();});
@@ -12546,10 +12546,13 @@ setInterval(()=>{
       const _blockedVolcano = (G.mode==='volcano' && typeof isVolcanoBlocked==='function' && isVolcanoBlocked(nx,ny));
       const _blockedDungeon = (G.mode==='dungeon' && typeof isDungeonBlocked==='function' && isDungeonBlocked(nx,ny));
       const _blockedOcean = (G.mode==='ocean' && typeof isOceanBlocked==='function' && isOceanBlocked(nx,ny));
-      // NPC collision — can't walk through NPCs in world mode
+      // NPC collision — can't walk through NPCs
       let _blockedNPC = false;
       if (G.mode==='world' && G.npcs) {
         _blockedNPC = G.npcs.some(n => n.x===nx && n.y===ny);
+      }
+      if (!_blockedNPC && typeof ZONE_NPCS!=='undefined' && ZONE_NPCS[G.mode]) {
+        _blockedNPC = ZONE_NPCS[G.mode].some(n => n.x===nx && n.y===ny);
       }
       const _blocked = _blockedHouse || _blockedFarm || _blockedWorld || _blockedForest || _blockedMines || _blockedBeach || _blockedBldg || _blockedSwamp || _blockedMountain || _blockedVillage || _blockedDesert || _blockedTundra || _blockedVolcano || _blockedDungeon || _blockedOcean || _blockedNPC;
       if(nx>=_minXY && nx<_moveW-_minXY && ny>=_minXY && ny<_moveH-_minXY && !_blocked){
@@ -18375,6 +18378,9 @@ function initJoystick() {
     const _blockedOcean = (G.mode==='ocean' && typeof isOceanBlocked==='function' && isOceanBlocked(nx,ny));
     let _blockedNPC = false;
     if (G.mode==='world' && G.npcs) { _blockedNPC = G.npcs.some(function(n){ return n.x===nx && n.y===ny; }); }
+    if (!_blockedNPC && typeof ZONE_NPCS!=='undefined' && ZONE_NPCS[G.mode]) {
+      _blockedNPC = ZONE_NPCS[G.mode].some(function(n){ return n.x===nx && n.y===ny; });
+    }
     const _blocked = _blockedHouse || _blockedFarm || _blockedWorld || _blockedForest || _blockedMines || _blockedBeach || _blockedBldg || _blockedSwamp || _blockedMountain || _blockedVillage || _blockedDesert || _blockedTundra || _blockedVolcano || _blockedDungeon || _blockedOcean || _blockedNPC;
     if (nx>=_minXY && nx<_moveW-_minXY && ny>=_minXY && ny<_moveH-_minXY && !_blocked) {
       G.player.x=nx; G.player.y=ny; G.player.dir=dir; G.player.step++;
@@ -21804,7 +21810,7 @@ function openDiscoveryWorkbench() {
       if (ingKeys.length !== slotKeys.length) continue;
       var match = true;
       for (var j = 0; j < ingKeys.length; j++) {
-        if (!ingCount[ingKeys[j]]) { match = false; break; }
+        if ((ingCount[ingKeys[j]]||0) < rec.ing[ingKeys[j]]) { match = false; break; }
       }
       if (match) { matched = rec; break; }
     }
@@ -27039,6 +27045,49 @@ var _v127Init = setInterval(function() {
     } catch(e) {}
   };
 
+  // ── Recover in-progress crafts after page refresh ─────────────────
+  window.recoverCraftTimers = function() {
+    if (!G.crafting || typeof G.crafting !== 'object') return;
+    var allRecipes = [];
+    if (typeof RECIPES !== 'undefined') RECIPES.forEach(function(r) { allRecipes.push(r); });
+    if (typeof SMELT_RECIPES !== 'undefined') SMELT_RECIPES.forEach(function(r) { allRecipes.push(r); });
+    if (typeof FORGE_RECIPES !== 'undefined') FORGE_RECIPES.forEach(function(r) { allRecipes.push(r); });
+    var recipeMap = {};
+    allRecipes.forEach(function(r) { recipeMap[r.id] = r; });
+
+    Object.keys(G.crafting).forEach(function(id) {
+      var craft = G.crafting[id];
+      if (!craft || !craft.done) { delete G.crafting[id]; return; }
+      var r = recipeMap[id];
+      if (!r) { delete G.crafting[id]; return; }
+
+      var remaining = craft.done - Date.now();
+
+      function deliverItem() {
+        if (r.isGear) {
+          G.gear[r.id] = true;
+          try { localStorage.setItem('lumora_gear_' + G.playerId, JSON.stringify(G.gear)); } catch(e) {}
+        } else if (G.inventory_ext && G.inventory_ext[r.id] !== undefined) {
+          G.inventory_ext[r.id] = (G.inventory_ext[r.id] || 0) + 1;
+        } else {
+          G.inv[r.id] = (G.inv[r.id] || 0) + 1;
+        }
+        delete G.crafting[id];
+        if (typeof notify === 'function') notify((r.e||'') + ' ' + r.name + ' done!', 'gold');
+        G.qstats.crafted = (G.qstats.crafted||0) + 1;
+        if (typeof renderCraft === 'function') renderCraft();
+        if (typeof updateUI === 'function') updateUI();
+        saveAllState();
+      }
+
+      if (remaining <= 0) {
+        deliverItem();
+      } else {
+        setTimeout(deliverItem, remaining);
+      }
+    });
+  };
+
   // Autosave every 60 seconds
   setInterval(function() {
     saveAllState();
@@ -27150,6 +27199,7 @@ var _v127Init = setInterval(function() {
 
   // Initial load
   loadAllState();
+  recoverCraftTimers();
 
 }, 500);
 

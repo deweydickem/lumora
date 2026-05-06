@@ -3246,7 +3246,7 @@ window._FT=[];
 
 <script>
 // Force-clear all service worker caches and unregister stale workers
-window._LUMORA_CACHE_V='v128';
+window._LUMORA_CACHE_V='v129';
 if('serviceWorker' in navigator){
   navigator.serviceWorker.getRegistrations().then(function(regs){
     regs.forEach(function(r){r.unregister();});
@@ -5505,7 +5505,7 @@ const NPC_QUESTS = {
     {id:'nq_todd4', title:'Trade Tycoon', desc:'Earn 1000◈ from sales total', stat:'goldSold', goal:1000, reward:{gold:200,lumi:0.03}, xp:{skill:'trading',amount:60},
      offer:'I only work with serious traders. Move 1000◈ total and you\'ll have earned my respect. And a fat bonus.',
      complete:'I\'ve been in this game 20 years and you... you might just be better than me. Here\'s your fortune.'},
-    {id:'nq_todd5', title:'Schott\'s Legacy', desc:'Earn 3000◈ total and complete 10 BM deals', stat:'totalGoldEarned', goal:3000, reward:{gold:400,lumi:0.06}, xp:{skill:'trading',amount:100}, giftItem:'todd_ledger',
+    {id:'nq_todd5', title:'Schott\'s Legacy', desc:'Earn 3000◈ total through trading', stat:'totalGoldEarned', goal:3000, reward:{gold:400,lumi:0.06}, xp:{skill:'trading',amount:100}, giftItem:'todd_ledger',
      offer:'Listen. I\'m retiring soon. I need someone to take over my contacts, my routes, my whole operation. Prove you\'re worth 3000◈ and it\'s yours.',
      complete:'I can\'t believe I\'m saying this, but... you\'re the one. Take my ledger. Every contact, every route. The Schott empire is yours now.'},
   ],
@@ -5522,7 +5522,7 @@ const NPC_QUESTS = {
     {id:'nq_dale4', title:'Neighborhood Watch', desc:'Complete 20 actions around town', stat:'totalActions', goal:20, reward:{gold:60,lumi:0.01}, xp:{skill:'farming',amount:20},
      offer:'I\'m starting a neighborhood watch. It\'s just me right now. And I guess you if you do 20 things around town. No pressure.',
      complete:'Alright you made the cut. You\'re on the watch now. Don\'t tell anyone but you\'re the only other member. Here\'s your pay.'},
-    {id:'nq_dale5', title:'Turbo Mode', desc:'Chop 20 trees and mine 20 rocks', stat:'treesChopped', goal:20, reward:{gold:150,lumi:0.03}, xp:{skill:'lumbering',amount:80}, giftItem:'dale_badge',
+    {id:'nq_dale5', title:'Turbo Mode', desc:'Chop 20 trees around town', stat:'treesChopped', goal:20, reward:{gold:150,lumi:0.03}, xp:{skill:'lumbering',amount:80}, giftItem:'dale_badge',
      offer:'You want the truth? I have no idea what I\'m doing here. But you — you actually get stuff done. Clear 20 trees and 20 rocks and I\'ll give you my backup badge. It\'s real. Mostly.',
      complete:'That\'s it. You did it. You\'re officially the second-most important person in Havenfield. I\'m first obviously. Take the badge. You earned it, Turbo.'},
   ],
@@ -16386,9 +16386,10 @@ function tryGather(forceChop) {
       notify('🪓 Chopping '+tdef.label+'…','');
       var _cKey=key, _cPx=px2, _cPy=py2, _cDef=tdef;
       startActionAnim('chopping', px2, py2, wtx, wty, 2000, {}, function(){
-        var wood = _cDef.wood[0] + Math.floor(Math.random()*(_cDef.wood[1]-_cDef.wood[0]+1)) + (G.skillBonuses.woodBonus||0);
+        var wood = (_cDef.wood[0] + Math.floor(Math.random()*(_cDef.wood[1]-_cDef.wood[0]+1)) + (G.skillBonuses.woodBonus||0)) * (G.skillBonuses.woodMultiplier||1);
+        wood = Math.floor(wood);
         G.inventory_ext.wood = (G.inventory_ext.wood||0) + wood;
-        var respawnMs = _cDef.respawnMs * (G.skillBonuses.treeRespawnMult||1);
+        var respawnMs = _cDef.respawnMs * (G.skillBonuses.treeRespawn||1);
         chopCooldowns.set(_cKey, Date.now() + respawnMs);
         chopStumps.set(_cKey, Date.now() + respawnMs);
         addParticle(_cPx,_cPy,'🪵',16);
@@ -16962,8 +16963,8 @@ async function generateNPCExchange(speakerName, listenerName, trigger = null) {
   const speaker = NPC_WORLD[speakerName];
   if (!speaker) return;
 
-  // Throttle — NPC speaks at most once per 90 seconds
-  if (Date.now() - speaker.lastSpoke < 90000) return;
+  // Throttle — NPC speaks at most once per 4 minutes
+  if (Date.now() - speaker.lastSpoke < 240000) return;
   speaker.lastSpoke = Date.now();
 
   const prompt = trigger
@@ -17393,7 +17394,7 @@ function maybeShareSecret(name) {
 (function rewriteScheduler(){
   if (typeof scheduleNPCConversation !== 'function') return;
   window.scheduleNPCConversation = function scheduleNPCConversation_v2() {
-    const delay = 1200000 + Math.random() * 900000; // 20-35 min
+    const delay = 3000000 + Math.random() * 2100000; // 50-85 min
     setTimeout(async () => {
       if (!G.running) { scheduleNPCConversation_v2(); return; }
       if (G.mode !== 'world') { scheduleNPCConversation_v2(); return; }
@@ -26871,7 +26872,7 @@ var _v127Init = setInterval(function() {
     { id:'mine_first',      icon:'\u26CF\uFE0F',  name:'First Strike',         desc:'Mine your first ore',                 check:function() { return (G.inventory_ext.copperOre||0)+(G.inventory_ext.ironOre||0)+(G.inventory_ext.frozenIron||0)+(G.inventory_ext.obsidian||0) > 0 || (G.qstats.mineCount||0) > 0; }, category:'mining' },
     { id:'mine_100',        icon:'\u26CF\uFE0F',  name:'Pickaxe Master',       desc:'Mine 100 ores',                       check:function() { return (G.qstats.mineCount||0) >= 100; }, category:'mining' },
     { id:'mine_dragon',     icon:'\uD83D\uDC09', name:'Dragon Hunter',         desc:'Mine a dragonstone',                  check:function() { return (G.inventory_ext.dragonstone||0) > 0 || (G.gear && G.gear.dragonBlade); }, category:'mining' },
-    { id:'smelt_all',       icon:'\uD83D\uDD25', name:'Master Smelter',        desc:'Smelt all bar types (copper, iron, gold, diamond)', check:function() { return G.inventory_ext.copperBar>0 || G.gear.copperWatering; }, category:'mining' },
+    { id:'smelt_all',       icon:'\uD83D\uDD25', name:'Master Smelter',        desc:'Smelt all bar types (copper, iron, gold, diamond)', check:function() { return (G.inventory_ext.copperBar||0)>0 && (G.inventory_ext.ironBar||0)>0 && (G.inventory_ext.goldBar||0)>0 && (G.inventory_ext.diamondGem||0)>0; }, category:'mining' },
     { id:'mine_500',        icon:'\uD83D\uDC8E', name:'Deep Digger',           desc:'Mine 500 ores',                       check:function() { return (G.qstats.mineCount||0) >= 500; }, category:'mining' },
     // Crafting
     { id:'craft_first',     icon:'\uD83D\uDD25', name:'First Creation',        desc:'Craft your first item',               check:function() { return (G.qstats.crafted||0) >= 1; }, category:'crafting' },
@@ -27006,8 +27007,9 @@ var _v127Init = setInterval(function() {
       localStorage.setItem('lumora_achievements_' + pid, JSON.stringify(G._achievements));
       localStorage.setItem('lumora_discoveries_' + pid, JSON.stringify(G._discoveredRecipes));
       localStorage.setItem('lumora_zones_' + pid, JSON.stringify(G._visitedZones));
-      if (G.equippedJewelry) localStorage.setItem('lumora_jewelry_eq_' + pid, JSON.stringify(G.equippedJewelry));
-      if (G.ownedJewelry) localStorage.setItem('lumora_jewelry_owned_' + pid, JSON.stringify(G.ownedJewelry));
+      if (typeof saveJewelry === 'function') saveJewelry();
+      if (typeof saveNpcQuestState === 'function') saveNpcQuestState();
+      if (typeof saveNPCMemory === 'function') saveNPCMemory();
       localStorage.setItem('lumora_save_ts_' + pid, Date.now().toString());
     } catch(e) {}
   };

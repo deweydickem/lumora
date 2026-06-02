@@ -7135,6 +7135,11 @@ function drawBuilding(tx,ty,w,h,icon,label,wallCol,roofCol){
   ctx.fillStyle='rgba(0,0,0,0.15)';
   ctx.fillRect(bx+bw-4,wallTop,4,wallBot-wallTop);
   ctx.fillRect(bx,wallBot-3,bw,3);
+  // ── Corner quoins (cornerstones) ──
+  for(let qy=wallTop+6;qy<wallBot-8;qy+=14){
+    ctx.fillStyle='rgba(255,255,255,0.10)'; ctx.fillRect(bx,qy,5,7); ctx.fillRect(bx+bw-5,qy+7,5,7);
+    ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(bx,qy+7,5,7); ctx.fillRect(bx+bw-5,qy,5,7);
+  }
 
   // ── Windows ──
   const winY=wallTop+8;
@@ -7239,46 +7244,32 @@ function drawBuilding(tx,ty,w,h,icon,label,wallCol,roofCol){
     }
   }
 
-  // ── Peaked roof ──
-  // Roof shadow on wall
-  ctx.fillStyle='rgba(0,0,0,0.12)';
+  // ── Hip roof with shingle courses ──
+  // Eave/soffit shadow on wall
+  ctx.fillStyle='rgba(0,0,0,0.20)';
   ctx.fillRect(bx,wallTop,bw,6);
-  // Main roof shape
-  ctx.fillStyle=roofCol;
-  ctx.beginPath();
-  ctx.moveTo(roofL,eaveY); ctx.lineTo(bx+bw/2,peakY); ctx.lineTo(roofR,eaveY);
-  ctx.closePath(); ctx.fill();
-  // Roof shading — darker bottom half
-  ctx.fillStyle='rgba(0,0,0,0.12)';
-  ctx.beginPath();
-  const midRoofY=(peakY+eaveY)/2+4;
-  ctx.moveTo(roofL,eaveY);
-  ctx.lineTo(roofL+(roofR-roofL)*0.25, midRoofY);
-  ctx.lineTo(roofR-(roofR-roofL)*0.25, midRoofY);
-  ctx.lineTo(roofR,eaveY);
-  ctx.closePath(); ctx.fill();
-  // Roof highlight — lighter top portion
-  ctx.fillStyle='rgba(255,255,255,0.1)';
-  ctx.beginPath();
-  ctx.moveTo(bx+bw*0.3,eaveY-roofH*0.5);
-  ctx.lineTo(bx+bw/2,peakY);
-  ctx.lineTo(bx+bw*0.35,eaveY-roofH*0.3);
-  ctx.closePath(); ctx.fill();
-  // Roof ridge line
-  ctx.fillStyle='rgba(0,0,0,0.25)';
-  ctx.fillRect(bx+bw/2-1,peakY,2,3);
-  // Eave trim
-  ctx.fillStyle=_darken(roofCol,25);
-  ctx.fillRect(roofL,eaveY-2,roofR-roofL,3);
-  // Shingle lines
-  ctx.fillStyle='rgba(0,0,0,0.08)';
-  const shingleRows=4;
-  for(let s=1;s<shingleRows;s++){
-    const sy=peakY+(eaveY-peakY)*s/shingleRows;
-    const sx1=roofL+(bx+bw/2-roofL)*s/shingleRows*0.85;
-    const sx2=roofR-(roofR-bx-bw/2)*s/shingleRows*0.85;
-    ctx.fillRect(Math.round(sx1),Math.round(sy),Math.round(sx2-sx1),1);
+  const cxR=bx+bw/2;
+  const ridgeHalf=bw*0.16, ridgeLx=cxR-ridgeHalf, ridgeRx=cxR+ridgeHalf;
+  const ROWS=6;
+  for(let rc=0;rc<ROWS;rc++){
+    const t0=rc/ROWS, t1=(rc+1)/ROWS;
+    const yT=peakY+(eaveY-peakY)*t0, yB=peakY+(eaveY-peakY)*t1;
+    const lT=ridgeLx+(roofL-ridgeLx)*t0, rT=ridgeRx+(roofR-ridgeRx)*t0;
+    const lB=ridgeLx+(roofL-ridgeLx)*t1, rB=ridgeRx+(roofR-ridgeRx)*t1;
+    ctx.fillStyle=(rc%2===0)?roofCol:_darken(roofCol,12);
+    ctx.beginPath(); ctx.moveTo(lT,yT); ctx.lineTo(rT,yT); ctx.lineTo(rB,yB); ctx.lineTo(lB,yB); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.16)'; ctx.fillRect(lB,yB-1,rB-lB,1.5);
+    ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fillRect(lT,yT,rT-lT,1);
   }
+  // Hip edges
+  ctx.strokeStyle=_darken(roofCol,28); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(ridgeLx,peakY); ctx.lineTo(roofL,eaveY); ctx.moveTo(ridgeRx,peakY); ctx.lineTo(roofR,eaveY); ctx.stroke();
+  ctx.lineWidth=1;
+  // Ridge cap
+  ctx.fillStyle=_darken(roofCol,22); ctx.fillRect(ridgeLx-2,peakY-3,(ridgeRx-ridgeLx)+4,5);
+  ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.fillRect(ridgeLx-2,peakY-3,(ridgeRx-ridgeLx)+4,1.5);
+  // Eave trim
+  ctx.fillStyle=_darken(roofCol,30); ctx.fillRect(roofL,eaveY-2,roofR-roofL,3);
 
   // (chimney drawn before roof above)
 

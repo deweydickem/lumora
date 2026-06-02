@@ -15042,9 +15042,15 @@ document.getElementById('chatinput').addEventListener('keydown',e=>{
 // UI UPDATE
 // ═══════════════════════════════════════════════════════════════════════════════
 function ownsHorse(){ return (G.farmAnimals||[]).some(function(a){ return a.type==='horse'; }); }
+function nearHorsePen(){
+  if(G.mode!=='farm' || !ownsHorse()) return false;
+  var x0=ANIMAL_PEN_OX-1, x1=ANIMAL_PEN_OX+ANIMAL_PEN_W+1, y0=ANIMAL_PEN_OY-1, y1=ANIMAL_PEN_OY+ANIMAL_PEN_H+1;
+  return G.player.x>=x0 && G.player.x<=x1 && G.player.y>=y0 && G.player.y<=y1;
+}
 function toggleMount(){
   if(G.mode==='house'||G.mode==='building'){ notify('Can\'t ride indoors','bad'); return; }
   if(!G._mounted && !ownsHorse()){ notify('\uD83D\uDC34 You need a horse \u2014 buy one from the Livestock Dealer','bad'); return; }
+  if(!G._mounted && !nearHorsePen()){ notify('Go to your horse in the farm pen to ride it','bad'); return; }
   G._mounted=!G._mounted;
   notify(G._mounted?'\uD83D\uDC34 Mounted! +30% speed':'Dismounted', G._mounted?'good':'');
   var mb=document.getElementById('hud-mount'); if(mb) mb.classList.toggle('act',G._mounted);
@@ -15053,7 +15059,7 @@ function toggleMount(){
 }
 window.toggleMount=toggleMount;
 function updateUI(){
-  try { var _mb=document.getElementById('hud-mount'); if(_mb) _mb.style.display = ownsHorse()?'':'none'; } catch(e){}
+  try { var _mb=document.getElementById('hud-mount'); if(_mb) _mb.style.display = (G._mounted||nearHorsePen())?'':'none'; } catch(e){}
   document.getElementById('st-seeds').textContent=G.seeds;
   document.getElementById('st-gold').textContent=G.gold;
   document.getElementById('st-lumi').textContent=G.lumi.toFixed(3);

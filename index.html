@@ -13848,17 +13848,20 @@ async function bmSell(id,crop,price,mult){
   const qty=Math.max(0,Math.floor(G.inv[crop]||0));if(!qty){notify('Nothing to sell','bad');return;}
   // Lock: zero inventory immediately to prevent double-sell
   G.inv[crop]=0;
-  const earn=Math.round(qty*price);
-  const ye=earn*.0004*Math.min(mult,5); // cap multiplier to prevent manipulation
-  G.gold+=earn;G.lumi+=ye;G.lumiTotal+=ye;
-  G.lumiHist.unshift(new Date().toLocaleTimeString()+' BM '+qty+'×'+crop+' → +'+ye.toFixed(4)+' $LUMI');
-  notify('🕯 BM: '+qty+'× '+crop+' → '+earn+'◈','bm');
-  addChat('Black Market','Sold '+qty+'× '+crop+' for '+earn+'◈!','sys');
   G.bmOffers=G.bmOffers.filter(x=>x.id!==id);
-  G.qstats.bmSales++;checkQuests();
   renderBM();updateUI();
-  // Sync to server
-  try { await api('POST','/api/market/sell',{playerId:G.playerId,items:{[crop]:qty}}); } catch(e){}
+  try {
+    // Server is authoritative: it validates inventory and caps the multiplier.
+    const res = await api('POST','/api/market/sell',{playerId:G.playerId,items:{[crop]:qty},bmMult:Math.min(mult,4)});
+    const earn=Math.round(res.goldEarned||0), ye=res.lumiEarned||0;
+    G.gold+=earn;G.lumi+=ye;G.lumiTotal+=ye;
+    G.lumiHist.unshift(new Date().toLocaleTimeString()+' BM '+qty+'×'+crop+' → +'+ye.toFixed(4)+' $LUMI');
+    notify('🕯 BM: '+qty+'× '+crop+' → '+earn+'◈','bm');
+    addChat('Black Market','Sold '+qty+'× '+crop+' for '+earn+'◈!','sys');
+    try{ if(res.levelUps) handleLevelUps(res.levelUps); }catch(e){}
+    G.qstats.bmSales++;checkQuests();
+    updateUI();scheduleSave();
+  } catch(e){ G.inv[crop]=(G.inv[crop]||0)+qty; renderBM();updateUI(); notify('Sale failed — try again','bad'); }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -15041,6 +15044,25 @@ document.getElementById('chatinput').addEventListener('keydown',e=>{
 // ═══════════════════════════════════════════════════════════════════════════════
 // UI UPDATE
 // ═══════════════════════════════════════════════════════════════════════════════
+function playSfx(type){
+  try {
+    var ac = window._sfxAC || (window._sfxAC = new (window.AudioContext||window.webkitAudioContext)());
+    if(ac.state==='suspended'){ try{ac.resume();}catch(e){} }
+    var t = ac.currentTime;
+    function note(f0,f1,dur,delay,vol){
+      var o=ac.createOscillator(), g=ac.createGain();
+      o.type='triangle'; o.connect(g); g.connect(ac.destination);
+      o.frequency.setValueAtTime(f0, t+delay);
+      o.frequency.exponentialRampToValueAtTime(f1, t+delay+dur);
+      g.gain.setValueAtTime(0.0001, t+delay);
+      g.gain.exponentialRampToValueAtTime(vol||0.13, t+delay+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+delay+dur);
+      o.start(t+delay); o.stop(t+delay+dur+0.03);
+    }
+    if(type==='mount'){ note(300,520,0.10,0,0.14); note(520,440,0.13,0.10,0.14); }
+    else { note(480,250,0.16,0,0.12); }
+  } catch(e){}
+}
 function ownsHorse(){ return (G.farmAnimals||[]).some(function(a){ return a.type==='horse'; }); }
 function nearHorsePen(){
   if(G.mode!=='farm' || !ownsHorse()) return false;
@@ -15058,6 +15080,7 @@ function toggleMount(){
   if(!G._mounted && !ownsHorse()){ notify('\uD83D\uDC34 You need a horse \u2014 buy one from the Livestock Dealer','bad'); return; }
   if(!G._mounted && !nearHorsePen()){ notify('Go to your horse in the farm pen to ride it','bad'); return; }
   G._mounted=!G._mounted;
+  try{ playSfx(G._mounted?'mount':'dismount'); }catch(e){}
   notify(G._mounted?'\uD83D\uDC34 Mounted! +30% speed':'Dismounted', G._mounted?'good':'');
   var mb=document.getElementById('hud-mount'); if(mb) mb.classList.toggle('act',G._mounted);
   try{ if(typeof socket!=='undefined'&&socket&&socket.connected){ socket.emit('player:move',{x:G.player.x,y:G.player.y,dir:G.player.dir,followingPet:G._followingPet||null,mounted:G._mounted}); } }catch(e){}

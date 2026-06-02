@@ -12345,8 +12345,10 @@ function updateCamera(){
   const ty=G._vy*T-cvH()/2+T/2;
   const _mapW=G.mode==='house'?INT_W:G.mode==='building'?BLD_INT_W:G.mode==='farm'?FARM_W:G.mode==='forest'?FOREST_W:G.mode==='mines'?MINES_W:G.mode==='beach'?BEACH_W:G.mode==='swamp'?SWAMP_W:G.mode==='mountain'?MOUNTAIN_W:G.mode==='village'?VILLAGE_W:G.mode==='desert'?DESERT_W:G.mode==='tundra'?TUNDRA_W:G.mode==='volcano'?VOLCANO_W:G.mode==='dungeon'?DUNGEON_W:G.mode==='ocean'?OCEAN_W:MW; const maxX=Math.max(0,_mapW*T-cvW());
   const _mapH=G.mode==='house'?INT_H:G.mode==='building'?BLD_INT_H:G.mode==='farm'?FARM_H:G.mode==='forest'?FOREST_H:G.mode==='mines'?MINES_H:G.mode==='beach'?BEACH_H:G.mode==='swamp'?SWAMP_H:G.mode==='mountain'?MOUNTAIN_H:G.mode==='village'?VILLAGE_H:G.mode==='desert'?DESERT_H:G.mode==='tundra'?TUNDRA_H:G.mode==='volcano'?VOLCANO_H:G.mode==='dungeon'?DUNGEON_H:G.mode==='ocean'?OCEAN_H:MH; const maxY=Math.max(0,_mapH*T-cvH());
-  const cx=Math.max(0,Math.min(maxX,tx));
-  const cy=Math.max(0,Math.min(maxY,ty));
+  // Center any map smaller than the viewport (e.g. building/house interiors); otherwise follow the player.
+  const _fullW=_mapW*T, _fullH=_mapH*T;
+  const cx = (_fullW <= cvW()) ? Math.round((_fullW - cvW())/2) : Math.max(0,Math.min(maxX,tx));
+  const cy = (_fullH <= cvH()) ? Math.round((_fullH - cvH())/2) : Math.max(0,Math.min(maxY,ty));
   if(G._snapCam){
     G.cam.x=cx; G.cam.y=cy; G._snapCam=false;
   } else {

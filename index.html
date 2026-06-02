@@ -7137,8 +7137,8 @@ function drawBuilding(tx,ty,w,h,icon,label,wallCol,roofCol){
   ctx.fillRect(bx,wallBot-3,bw,3);
   // ── Corner quoins (cornerstones) ──
   for(let qy=wallTop+6;qy<wallBot-8;qy+=14){
-    ctx.fillStyle='rgba(255,255,255,0.10)'; ctx.fillRect(bx,qy,5,7); ctx.fillRect(bx+bw-5,qy+7,5,7);
-    ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(bx,qy+7,5,7); ctx.fillRect(bx+bw-5,qy,5,7);
+    ctx.fillStyle='rgba(255,255,255,0.16)'; ctx.fillRect(bx,qy,5,7); ctx.fillRect(bx+bw-5,qy+7,5,7);
+    ctx.fillStyle='rgba(0,0,0,0.18)'; ctx.fillRect(bx,qy+7,5,7); ctx.fillRect(bx+bw-5,qy,5,7);
   }
 
   // ── Windows ──
@@ -7256,10 +7256,10 @@ function drawBuilding(tx,ty,w,h,icon,label,wallCol,roofCol){
     const yT=peakY+(eaveY-peakY)*t0, yB=peakY+(eaveY-peakY)*t1;
     const lT=ridgeLx+(roofL-ridgeLx)*t0, rT=ridgeRx+(roofR-ridgeRx)*t0;
     const lB=ridgeLx+(roofL-ridgeLx)*t1, rB=ridgeRx+(roofR-ridgeRx)*t1;
-    ctx.fillStyle=(rc%2===0)?roofCol:_darken(roofCol,12);
+    ctx.fillStyle=(rc%2===0)?roofCol:_darken(roofCol,26);
     ctx.beginPath(); ctx.moveTo(lT,yT); ctx.lineTo(rT,yT); ctx.lineTo(rB,yB); ctx.lineTo(lB,yB); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(0,0,0,0.16)'; ctx.fillRect(lB,yB-1,rB-lB,1.5);
-    ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fillRect(lT,yT,rT-lT,1);
+    ctx.fillStyle='rgba(0,0,0,0.34)'; ctx.fillRect(lB,yB-1,rB-lB,2);
+    ctx.fillStyle='rgba(255,255,255,0.13)'; ctx.fillRect(lT,yT,rT-lT,1);
   }
   // Hip edges
   ctx.strokeStyle=_darken(roofCol,28); ctx.lineWidth=1.5;

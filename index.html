@@ -11348,7 +11348,7 @@ function drawPlots() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // CHARACTER DRAWING
 // ═══════════════════════════════════════════════════════════════════════════════
-function drawChar(gx,gy,col,dir,step,name,emote,chatBubble,appearance){
+function drawChar(gx,gy,col,dir,step,name,emote,chatBubble,appearance,riding){
   ctx.globalAlpha=1;
   const x=px(gx),y=py(gy);
   const bob=Math.sin(step*0.5)*0.4;
@@ -11384,8 +11384,8 @@ function drawChar(gx,gy,col,dir,step,name,emote,chatBubble,appearance){
   const bounce=isWalking?Math.abs(Math.sin(wP*2))*0.8:0;
 
   // ── Shadow ──
-  ctx.fillStyle='rgba(0,0,0,.18)';
-  ctx.beginPath();ctx.ellipse(cx,y+T-1,10,3,0,0,Math.PI*2);ctx.fill();
+  if(!riding){ ctx.fillStyle='rgba(0,0,0,.18)';
+  ctx.beginPath();ctx.ellipse(cx,y+T-1,10,3,0,0,Math.PI*2);ctx.fill(); }
 
   // ── Pixel-art body (fillRect style matching character creator) ──
   ctx.save();
@@ -12188,8 +12188,16 @@ function render(ts){
 
   // Other players (only in world and farm modes — hide inside buildings/house/biomes)
   if (G.mode === 'world' || G.mode === 'farm') G.otherPlayers.forEach((p,id) => {
-    if (p.mounted) { try { drawPixelHorse(px(p.x)+T/2, py(p.y)+T-6, (p.dir===3?-1:1), false, p.step||0); } catch(e){} }
-    drawChar(p.x,p.y,(p.appearance&&p.appearance.shirt)||'#a060e0',p.dir||2,p.step||0,p.username||'Player','',p.chatBubble||null,p.appearance||null);
+    if (p.mounted) {
+      try {
+        var _pcx=px(p.x)+T/2;
+        ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(_pcx, py(p.y)+T-1, 13, 3.5, 0,0,Math.PI*2); ctx.fill();
+        drawPixelHorse(_pcx, py(p.y)+14, (p.dir===3?-1:1), false, p.step||0);
+        drawChar(p.x, p.y-0.45, (p.appearance&&p.appearance.shirt)||'#a060e0', p.dir||2, p.step||0, p.username||'Player','',p.chatBubble||null, p.appearance||null, true);
+      } catch(e){ drawChar(p.x,p.y,(p.appearance&&p.appearance.shirt)||'#a060e0',p.dir||2,p.step||0,p.username||'Player','',p.chatBubble||null,p.appearance||null); }
+    } else {
+      drawChar(p.x,p.y,(p.appearance&&p.appearance.shirt)||'#a060e0',p.dir||2,p.step||0,p.username||'Player','',p.chatBubble||null,p.appearance||null);
+    }
     // Draw their following pet trailing behind them
     if (p.followingPet && PETS_DEF[p.followingPet]) {
       const pdef = PETS_DEF[p.followingPet];
@@ -12257,8 +12265,16 @@ function render(ts){
   }
   // Resource node interaction hints (trees, rocks, fish spots)
   try { drawResourceHints(); } catch(e) {}
-  if (G._mounted) { try { drawPixelHorse(px(G._vx)+T/2, py(G._vy)+T-6, (G.player.dir===3?-1:1), false, G._walkPhase||0); } catch(e){} }
-  drawChar(G._vx,G._vy,(G.appearance&&G.appearance.shirt)||'#e87040',G.player.dir,G._walkPhase,G.username,G.player.emote,G.chatBubble,G.appearance||null);
+  if (G._mounted) {
+    try {
+      var _mcx=px(G._vx)+T/2;
+      ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(_mcx, py(G._vy)+T-1, 13, 3.5, 0,0,Math.PI*2); ctx.fill();
+      drawPixelHorse(_mcx, py(G._vy)+14, (G.player.dir===3?-1:1), false, G._walkPhase||0);
+      drawChar(G._vx, G._vy-0.45, (G.appearance&&G.appearance.shirt)||'#e87040', G.player.dir, G._walkPhase, G.username, G.player.emote, G.chatBubble, G.appearance||null, true);
+    } catch(e){ drawChar(G._vx,G._vy,(G.appearance&&G.appearance.shirt)||'#e87040',G.player.dir,G._walkPhase,G.username,G.player.emote,G.chatBubble,G.appearance||null); }
+  } else {
+    drawChar(G._vx,G._vy,(G.appearance&&G.appearance.shirt)||'#e87040',G.player.dir,G._walkPhase,G.username,G.player.emote,G.chatBubble,G.appearance||null);
+  }
   // Draw following pet in any mode
   if (G._petFollowing && G._followingPet) drawFollowingPet();
   drawActionAnims();

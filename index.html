@@ -12190,10 +12190,10 @@ function render(ts){
   if (G.mode === 'world' || G.mode === 'farm') G.otherPlayers.forEach((p,id) => {
     if (p.mounted) {
       try {
-        var _pcx=px(p.x)+T/2;
-        ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(_pcx, py(p.y)+T-1, 13, 3.5, 0,0,Math.PI*2); ctx.fill();
-        drawPixelHorse(_pcx, py(p.y)+14, (p.dir===3?-1:1), false, p.step||0);
-        drawChar(p.x, p.y-0.45, (p.appearance&&p.appearance.shirt)||'#a060e0', p.dir||2, p.step||0, p.username||'Player','',p.chatBubble||null, p.appearance||null, true);
+        var _pcx=px(p.x)+T/2, _pgy=py(p.y)+T-1, _pf=(p.dir===3?-1:1);
+        ctx.fillStyle='rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(_pcx, _pgy, 16, 4, 0,0,Math.PI*2); ctx.fill();
+        ctx.save(); ctx.translate(_pcx, _pgy); ctx.scale(1.35,1.35); drawPixelHorse(0, -20, _pf, false, p.step||0); ctx.restore();
+        drawChar(p.x, p.y-0.80, (p.appearance&&p.appearance.shirt)||'#a060e0', p.dir||2, p.step||0, p.username||'Player','',p.chatBubble||null, p.appearance||null, true);
       } catch(e){ drawChar(p.x,p.y,(p.appearance&&p.appearance.shirt)||'#a060e0',p.dir||2,p.step||0,p.username||'Player','',p.chatBubble||null,p.appearance||null); }
     } else {
       drawChar(p.x,p.y,(p.appearance&&p.appearance.shirt)||'#a060e0',p.dir||2,p.step||0,p.username||'Player','',p.chatBubble||null,p.appearance||null);
@@ -12267,10 +12267,10 @@ function render(ts){
   try { drawResourceHints(); } catch(e) {}
   if (G._mounted) {
     try {
-      var _mcx=px(G._vx)+T/2;
-      ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(_mcx, py(G._vy)+T-1, 13, 3.5, 0,0,Math.PI*2); ctx.fill();
-      drawPixelHorse(_mcx, py(G._vy)+14, (G.player.dir===3?-1:1), false, G._walkPhase||0);
-      drawChar(G._vx, G._vy-0.45, (G.appearance&&G.appearance.shirt)||'#e87040', G.player.dir, G._walkPhase, G.username, G.player.emote, G.chatBubble, G.appearance||null, true);
+      var _mcx=px(G._vx)+T/2, _mgy=py(G._vy)+T-1, _mf=(G.player.dir===3?-1:1);
+      ctx.fillStyle='rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(_mcx, _mgy, 16, 4, 0,0,Math.PI*2); ctx.fill();
+      ctx.save(); ctx.translate(_mcx, _mgy); ctx.scale(1.35,1.35); drawPixelHorse(0, -20, _mf, false, G._walkPhase||0); ctx.restore();
+      drawChar(G._vx, G._vy-0.80, (G.appearance&&G.appearance.shirt)||'#e87040', G.player.dir, G._walkPhase, G.username, G.player.emote, G.chatBubble, G.appearance||null, true);
     } catch(e){ drawChar(G._vx,G._vy,(G.appearance&&G.appearance.shirt)||'#e87040',G.player.dir,G._walkPhase,G.username,G.player.emote,G.chatBubble,G.appearance||null); }
   } else {
     drawChar(G._vx,G._vy,(G.appearance&&G.appearance.shirt)||'#e87040',G.player.dir,G._walkPhase,G.username,G.player.emote,G.chatBubble,G.appearance||null);

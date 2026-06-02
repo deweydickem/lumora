@@ -15044,8 +15044,14 @@ document.getElementById('chatinput').addEventListener('keydown',e=>{
 function ownsHorse(){ return (G.farmAnimals||[]).some(function(a){ return a.type==='horse'; }); }
 function nearHorsePen(){
   if(G.mode!=='farm' || !ownsHorse()) return false;
-  var x0=ANIMAL_PEN_OX-1, x1=ANIMAL_PEN_OX+ANIMAL_PEN_W+1, y0=ANIMAL_PEN_OY-1, y1=ANIMAL_PEN_OY+ANIMAL_PEN_H+1;
-  return G.player.x>=x0 && G.player.x<=x1 && G.player.y>=y0 && G.player.y<=y1;
+  var arr=G.farmAnimals||[], horse=null, idx=0;
+  for(var i=0;i<arr.length;i++){ if(arr[i].type==='horse'){ horse=arr[i]; idx=i; break; } }
+  if(!horse) return false;
+  var w=(typeof _getAnimalWander==='function') ? _getAnimalWander(horse.id||('a'+idx), idx) : null;
+  if(!w) return false;
+  var hx=ANIMAL_PEN_OX + w.x*ANIMAL_PEN_W, hy=ANIMAL_PEN_OY + w.y*ANIMAL_PEN_H;
+  var dx=G.player.x-hx, dy=G.player.y-hy;
+  return (dx*dx+dy*dy) <= 6.25; // within ~2.5 tiles of the horse
 }
 function toggleMount(){
   if(G.mode==='house'||G.mode==='building'){ notify('Can\'t ride indoors','bad'); return; }

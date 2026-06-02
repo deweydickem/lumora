@@ -4766,7 +4766,7 @@ const ORE_DEFS = {
   // Volcano ores (requires reinforced pickaxe)
   obsidian:     { icon:'⚫', name:'Obsidian',       color:'#2a1a3a', xp:45, value:45, respawnMs:8*60*1000,  miningLvl:35 },
   fireCrystal:  { icon:'🔥', name:'Fire Crystal',   color:'#ff6030', xp:65, value:90, respawnMs:15*60*1000, miningLvl:45 },
-  dragonstone:  { icon:'🐉', name:'Dragonstone',    color:'#e040a0', xp:100, value:150, respawnMs:30*60*1000, miningLvl:55 },
+  dragonstone:  { icon:'🐉', name:'Dragonstone',    color:'#e040a0', xp:100, value:150, respawnMs:30*60*1000, miningLvl:50 },
 };
 
 // Ore node positions in the mines [x, y, oreType]
@@ -4875,7 +4875,7 @@ function parcelOrigin(col, row) {
 function _isOnParcelType(parcelIdxArr) {
   const px = G.player.x, py = G.player.y;
   for (const pidx of parcelIdxArr) {
-    const col = pidx % FARM_GRID_COLS, row = Math.floor(pidx / FARM_GRID_COLS);
+    const {col, row} = parcelColRow(pidx);
     const {tx:ox, ty:oy} = parcelOrigin(col, row);
     if (px >= ox && px < ox + FARM_PARCEL_W && py >= oy && py < oy + FARM_PARCEL_H) return true;
   }
@@ -5127,8 +5127,8 @@ Object.entries(RARE_ITEMS).forEach(([k,v]) => {
 function fluctuateRarePrices() {
   Object.entries(RARE_ITEMS).forEach(([k,v]) => {
     if (v.volatile) {
-      const drift = (Math.random() - 0.48) * 0.1;
-      rareMarketPrices[k] = Math.max(v.basePrice * 0.6, Math.round(rareMarketPrices[k] * (1 + drift)));
+      const drift = (Math.random() - 0.5) * 0.1;
+      rareMarketPrices[k] = Math.max(v.basePrice * 0.6, Math.min(v.basePrice * 1.8, Math.round(rareMarketPrices[k] * (1 + drift))));
     }
   });
   if (document.getElementById('tab-rare')?.classList.contains('vis')) renderRareMarket();
@@ -5332,7 +5332,6 @@ const WILD_PRICES = {
   arcticBerry: 16,
   frozenAmber: 35,
   // Volcano materials
-  fireCrystal: 50,
   obsidianShard: 45,
   ashBloom: 25,
   // Ocean materials
@@ -5806,6 +5805,13 @@ function connectSocket() {
   socket.on('quests:daily_reset', () => {
     G.questState.dailyClaimed = {};
     G.questState.bountyClaimed = {};
+    const _rs = { harvested: G.qstats.harvested||0, watered: G.qstats.watered||0 };
+    if (G._npcQuestBaseline && G._npcQuestBaselineStat) {
+      for (const _id in G._npcQuestBaseline) {
+        const _st = G._npcQuestBaselineStat[_id];
+        if (_st in _rs) G._npcQuestBaseline[_id] = Math.max(0, G._npcQuestBaseline[_id] - _rs[_st]);
+      }
+    }
     G.qstats.harvested = 0; G.qstats.watered = 0;
     G.activeDailies = rollDailies();
     G.activeBounty = rollBounty();
@@ -8994,7 +9000,7 @@ function initWeatherParticles() {
 }
 
 function drawWeather() {
-  if (G.mode === 'house' || G.mode === 'mines') return; // no weather indoors/underground
+  if (G.mode === 'house' || G.mode === 'mines' || G.mode === 'building') return; // no weather indoors/underground
   initWeatherParticles();
   const w = G.weather || 'sunny';
   if (w === 'sunny') return;
@@ -9236,8 +9242,8 @@ function juiceLevelUp(skill, level) {
       x: cvW() * 0.2 + Math.random() * cvW() * 0.6,
       y: -10, vx: -2 + Math.random() * 4, vy: 2 + Math.random() * 4,
       gravity: 0.08, col: ['#F4C97A','#8ac860','#7ec8f0','#c85a20','#ff6b6b','#a855f7'][Math.floor(Math.random()*6)],
-      size: 3 + Math.random() * 4, rot: Math.random() * 6.28, rotV: -0.1 + Math.random() * 0.2,
-      life: 80 + Math.random() * 40
+      size: 3 + Math.random() * 4, rot: Math.random() * 6.28, rv: -0.1 + Math.random() * 0.2,
+      life: 1
     });
   }
 }
@@ -9260,8 +9266,8 @@ function juiceQuestComplete() {
       x: Math.random() * cvW(), y: -10 - Math.random() * 40,
       vx: -1.5 + Math.random() * 3, vy: 2 + Math.random() * 3,
       gravity: 0.06, col: ['#F4C97A','#8ac860','#7ec8f0','#c85a20','#ff6b6b','#a855f7'][Math.floor(Math.random()*6)],
-      size: 3 + Math.random() * 5, rot: Math.random() * 6.28, rotV: -0.08 + Math.random() * 0.16,
-      life: 100 + Math.random() * 60
+      size: 3 + Math.random() * 5, rot: Math.random() * 6.28, rv: -0.08 + Math.random() * 0.16,
+      life: 1
     });
   }
 }
@@ -9861,7 +9867,7 @@ function drawMountainMap() {
   // Mountain peak shrine at top center
   const shrineX = Math.floor(MOUNTAIN_W/2);
   const shrineY = 2;
-  if (px(shrineX)>cvW()+T||px(shrineX)<-T||py(shrineY)>cvH()+T||py(shrineY)<-T) {
+  if (!(px(shrineX)>cvW()+T||px(shrineX)<-T||py(shrineY)>cvH()+T||py(shrineY)<-T)) {
     // Shrine base
     ctx.fillStyle = '#8B5E3C';
     ctx.fillRect(px(shrineX)-1, py(shrineY), 3*T, T);
@@ -9946,7 +9952,7 @@ function drawVillageMap() {
   // Fish market stall (center)
   const mX = Math.floor(VILLAGE_W/2);
   const mY = 12;
-  if (px(mX)>cvW()+T||px(mX)<-T||py(mY)>cvH()+T||py(mY)<-T) {
+  if (!(px(mX)>cvW()+T||px(mX)<-T||py(mY)>cvH()+T||py(mY)<-T)) {
     ctx.fillStyle = '#c4a060';
     ctx.fillRect(px(mX-1), py(mY), 3*T, T);
     ctx.fillStyle = '#a08040';
@@ -9971,7 +9977,7 @@ function drawVillageMap() {
   // Lighthouse (tall at right)
   const lhX = VILLAGE_W - 4;
   const lhY = 4;
-  if (px(lhX)>cvW()+T||px(lhX)<-T||py(lhY)>cvH()+T||py(lhY)<-T) {
+  if (!(px(lhX)>cvW()+T||px(lhX)<-T||py(lhY)>cvH()+T||py(lhY)<-T)) {
     // Tower
     ctx.fillStyle = '#c0c0d0';
     ctx.fillRect(px(lhX)+6, py(lhY)-10, 8, T+12);
@@ -12936,7 +12942,7 @@ async function interactPlot(p, forceAction){
       G.seeds--;
       addParticle(gx,gy,'🌱',11);
       var _growMsg = 'Planted '+CROPS[G.seedCrop].e+' '+G.seedCrop.toLowerCase();
-      if (_pb3.growthMult < 1) _growMsg += ' (⚡'+Math.round((1-_pb3.growthMult)*100)+'% faster!)';
+      var _gm = (G.skillBonuses && G.skillBonuses.growthMult) || 1; if (_gm < 1) _growMsg += ' (⚡'+Math.round((1-_gm)*100)+'% faster!)';
       notify(_growMsg,'good');
       handleLevelUps(res.levelUps);
       const plantLvl = awardXP('botany', 4);
@@ -13647,11 +13653,11 @@ function renderCraft(){
   const recipes=RECIPES.filter(r=>r.id!=='ale'||showAle);
   recipes.forEach(r=>{
     const going=G.crafting[r.id]&&G.crafting[r.id].done>Date.now();
-    const can=!going&&Object.entries(r.ing).every(([k,v])=>k==='wood'?(G.inventory_ext.wood||0)>=v:(G.inv[k]||0)>=v);
+    const can=!going&&Object.entries(r.ing).every(([k,v])=>(k===k.toLowerCase()?(G.inventory_ext[k]||0):(G.inv[k]||0))>=v);
     const val=Math.round(r.bv*(G.blockMult||1));
     const prog=going?Math.round(((Date.now()-G.crafting[r.id].start)/(G.crafting[r.id].done-G.crafting[r.id].start))*100):0;
     const ingStr=Object.entries(r.ing).map(([k,v])=>{
-      const have=k==='wood'?(G.inventory_ext.wood||0):(G.inv[k]||0);
+      const have=k===k.toLowerCase()?(G.inventory_ext[k]||0):(G.inv[k]||0);
       const color=have>=v?'#8ac860':'#c84020';
       return '<span style="color:'+color+'">'+v+'x '+k.toLowerCase()+' ('+have+')</span>';
     }).join(' + ');
@@ -13679,12 +13685,12 @@ function renderCraft(){
 
 async function doCraft(id){
   const r=RECIPES.find(x=>x.id===id);if(!r)return;
-  if(!Object.entries(r.ing).every(([k,v])=>(G.inv[k]||0)>=v)){notify('Not enough ingredients','bad');return;}
+  if(!Object.entries(r.ing).every(([k,v])=>(k===k.toLowerCase()?(G.inventory_ext[k]||0):(G.inv[k]||0))>=v)){notify('Not enough ingredients','bad');return;}
 
   try {
     const res = await api('POST','/api/farm/craft',{playerId:G.playerId,recipe:id});
     Object.entries(r.ing).forEach(([k,v])=>{
-      if(k==='wood') G.inventory_ext.wood=Math.max(0,(G.inventory_ext.wood||0)-v);
+      if(k===k.toLowerCase()) G.inventory_ext[k]=Math.max(0,(G.inventory_ext[k]||0)-v);
       else G.inv[k]-=v;
     });
     const now=Date.now();
@@ -14233,6 +14239,7 @@ function checkQuests(){
   });
   // Auto-compute derived stats
   G.qstats.cropTypesOwned = Object.keys(CROPS).filter(k=>k!=='GOLDEN_WHEAT'&&(G.inv[k]||0)>0).length;
+  G.qstats.cropTypes = G.qstats.cropTypesOwned;
   G.qstats.animalsOwned = (G.farmAnimals||[]).length;
   G.qstats.skillsAt10 = Object.values(G.skills).filter(s=>s.level>=10).length;
   renderQuests();
@@ -14600,6 +14607,7 @@ function acceptNpcQuest(npcName, questId) {
   // Snapshot current stat so progress is measured from now
   if (!G._npcQuestBaseline) G._npcQuestBaseline = {};
   G._npcQuestBaseline[questId] = G.qstats[q.stat] || 0;
+  (G._npcQuestBaselineStat = G._npcQuestBaselineStat || {})[questId] = q.stat;
   saveNpcQuestState();
   const pop = document.getElementById('npc-quest-popup');
   if (pop) pop.style.display = 'none';
@@ -16279,7 +16287,6 @@ function checkParcelInteraction() {
     const pidx = parcelIndex(col, row);
     if (pidx === null) continue;
     if (G.ownedParcels && G.ownedParcels.includes(pidx)) continue;
-    if (pidx === FARM_CENTER_LINEAR) continue; // never buy your home parcel
     const {tx: ox, ty: oy} = parcelOrigin(col, row);
     // Only trigger when the player is STRICTLY INSIDE the locked parcel tiles.
     // Prevents false-positive on the edge of an owned neighbouring parcel.
@@ -19194,6 +19201,7 @@ const PLAYLIST = [
   { src: '/Mugs_On_The_Oakwood_Table.mp3',         title: 'Mugs on the Oakwood Table' },
 ];
 let currentTrack = 0;
+let _trackHistory = [];
 let musicPlaying = false;
 let _musicVol = 0.35;
 const bgm = document.getElementById('bgm');
@@ -19244,12 +19252,15 @@ function _updateMusicUI(playing) {
 }
 
 function nextTrack() {
+  _trackHistory.push(currentTrack);
+  if (_trackHistory.length > 50) _trackHistory.shift();
   loadTrack(_nextShuffleIdx());
   if (musicPlaying) bgm.play().catch(()=>{});
 }
 
 function prevTrack() {
-  loadTrack(_nextShuffleIdx());
+  const prev = _trackHistory.pop();
+  loadTrack(prev !== undefined ? prev : (currentTrack - 1));
   if (musicPlaying) bgm.play().catch(()=>{});
 }
 
@@ -19457,7 +19468,7 @@ const PETS_DEF = {
   },
   raccoon: {
     price: 280, rarity: 'uncommon', icon: '🦝', name: 'Bandit',
-    unlock: { skill: 'MINING', level: 15 },
+    unlock: { skill: 'prospecting', level: 15 },
     perk: '+5% ore yield',
     applyPerk: () => { G.skillBonuses.petOreYield = 0.05; },
     color: '#7a7a7a'
@@ -19465,7 +19476,7 @@ const PETS_DEF = {
   // ── RARE ──
   wolf: {
     price: 800, rarity: 'rare', icon: '🐺', name: 'Shadow Wolf',
-    unlock: { skill: 'WOODCUTTING', level: 30 },
+    unlock: { skill: 'lumbering', level: 30 },
     perk: 'Auto-collects dropped items nearby',
     applyPerk: () => { G.skillBonuses.petAutoLoot = true; },
     ability: { type: 'auto_loot', range: 2, desc: 'Picks up drops within 2 tiles' },
@@ -19473,7 +19484,7 @@ const PETS_DEF = {
   },
   hawk: {
     price: 900, rarity: 'rare', icon: '🦅', name: 'Golden Hawk',
-    unlock: { skill: 'FISHING', level: 30 },
+    unlock: { skill: 'fishing', level: 30 },
     perk: '+15% fishing success',
     applyPerk: () => { G.skillBonuses.petFishBonus = 0.15; },
     ability: { type: 'fish_boost', desc: 'Boosts fishing tension window by 15%' },
@@ -19498,7 +19509,7 @@ const PETS_DEF = {
   },
   dragon: {
     price: 5000, rarity: 'legendary', icon: '🐉', name: 'Ember Drake',
-    unlock: { skill: 'MINING', level: 45 },
+    unlock: { skill: 'prospecting', level: 45 },
     perk: '+25% gold from ALL sources',
     applyPerk: () => { G.skillBonuses.petGoldBonus = 0.25; },
     ability: { type: 'gold_boost', desc: '+25% gold from everything' },
@@ -19885,7 +19896,8 @@ function buyAnimal(key) {
     id: 'animal_' + key + '_' + Date.now(),
     type: key,
     fedAt: Date.now(),
-    lastProduce: Date.now(),
+    lastProducedAt: Date.now(),
+    mood: 0.5,
   });
   notify('🐄 ' + animal.name + ' sent to your farm pen!', 'good');
   addChat('Livestock', '🐄 ' + G.username + ' bought a ' + animal.name + '!', 'sys');
@@ -21452,7 +21464,7 @@ function renderAnimals() {
   // Animal shop
   shop.innerHTML = '';
   Object.entries(ANIMALS_DEF).forEach(([type, def]) => {
-    const { locked, missing } = checkAnimalUnlock(type);
+    const locked = !!checkAnimalUnlock(def);
     const canAfford = G.gold >= def.price;
     const reqLabel = animalUnlockLabel(type);
     // Progress bars for each required skill
@@ -21652,13 +21664,13 @@ const FORGE_RECIPES = [
   { id:'lavaCoreArmor',e:'\uD83D\uDD34',        name:'Lava Core Armor',  ing:{obsidian:8, fireCrystal:4},                        ct:5400,  bv:550,  miningLvl:45, desc:'Armor forged in magma. Immune to heat.', isGear:true, tier:'volcano' },
   { id:'emberCrown',   e:'\uD83D\uDC51',        name:'Ember Crown',      ing:{fireCrystal:6, goldBar:2, diamondGem:1},           ct:3600,  bv:500,  miningLvl:45, desc:'Crown wreathed in eternal flame.', isGear:true, tier:'volcano' },
   // ── Dragon Tier (endgame) ──
-  { id:'dragonBlade',  e:'\uD83D\uDC09',        name:'Dragonfire Blade', ing:{dragonstone:3, fireCrystal:4, gildedAlloy:2},      ct:7200,  bv:800,  miningLvl:55, desc:'The ultimate weapon. Burns with dragonfire.', isGear:true, tier:'dragon' },
-  { id:'dragonMail',   e:'\uD83D\uDC32',        name:'Dragonscale Mail', ing:{dragonstone:5, obsidian:4, steelIngot:3},          ct:10800, bv:1000, miningLvl:55, desc:'Armor of legend. Impervious to all.', isGear:true, tier:'dragon' },
+  { id:'dragonBlade',  e:'\uD83D\uDC09',        name:'Dragonfire Blade', ing:{dragonstone:3, fireCrystal:4, gildedAlloy:2},      ct:7200,  bv:800,  miningLvl:50, desc:'The ultimate weapon. Burns with dragonfire.', isGear:true, tier:'dragon' },
+  { id:'dragonMail',   e:'\uD83D\uDC32',        name:'Dragonscale Mail', ing:{dragonstone:5, obsidian:4, steelIngot:3},          ct:10800, bv:1000, miningLvl:50, desc:'Armor of legend. Impervious to all.', isGear:true, tier:'dragon' },
   { id:'dragonCrown',  e:'\uD83D\uDC9C',        name:'Dragon Crown',     ing:{dragonstone:4, diamondGem:2, gildedAlloy:3},      ct:14400, bv:1200, miningLvl:60, desc:'Crown of the Dragon King. The ultimate status symbol.', isGear:true, tier:'dragon' },
   // ── Secret / Experimental (discoverable via workbench) ──
   { id:'frostFire',    e:'\uD83D\uDCA0',        name:'Frostfire Crystal',ing:{iceGem:2, fireCrystal:2},                          ct:1800,  bv:400,  miningLvl:35, desc:'Impossible fusion of ice and fire.', secret:true, isGear:true, tier:'secret' },
   { id:'voidstone',    e:'\uD83D\uDD73\uFE0F',  name:'Voidstone',        ing:{dragonstone:1, obsidian:3, iceGem:3},              ct:5400,  bv:700,  miningLvl:50, desc:'A stone from between worlds.', secret:true, isGear:true, tier:'secret' },
-  { id:'cosmicAmulet', e:'\uD83C\uDF0C',        name:'Cosmic Amulet',    ing:{dragonstone:2, diamondGem:2, iceGem:2, fireCrystal:2}, ct:10800, bv:1500, miningLvl:55, desc:'Contains the power of the cosmos.', secret:true, isGear:true, tier:'secret' },
+  { id:'cosmicAmulet', e:'\uD83C\uDF0C',        name:'Cosmic Amulet',    ing:{dragonstone:2, diamondGem:2, iceGem:2, fireCrystal:2}, ct:10800, bv:1500, miningLvl:50, desc:'Contains the power of the cosmos.', secret:true, isGear:true, tier:'secret' },
 ];
 
 // Ensure tundra/volcano ores exist in inventory

@@ -11445,19 +11445,19 @@ function drawChar(gx,gy,col,dir,step,name,emote,chatBubble,appearance,riding){
   // LEGS (with walk animation offset)
   // ════════════════════════════════════════
   ctx.fillStyle=pants;
-  R(-5,3+ll,4,7); R(1,3-ll,4,7);
+  if(riding){R(-6,1,4,4);R(2,1,4,4);}else{R(-5,3+ll,4,7);R(1,3-ll,4,7);}
   // Pant shadow stripe
   ctx.fillStyle=darken(pants,.1);
-  R(-5,3+ll,1,7); R(1,3-ll,1,7);
+  if(riding){R(-6,1,1,4);R(2,1,1,4);}else{R(-5,3+ll,1,7);R(1,3-ll,1,7);}
 
   // ════════════════════════════════════════
   // BOOTS
   // ════════════════════════════════════════
   ctx.fillStyle=boots;
-  R(-6,9+Math.round(ll*0.4),5,3); R(1,9-Math.round(ll*0.4),5,3);
+  if(riding){R(-8,4,4,3);R(4,4,4,3);}else{R(-6,9+Math.round(ll*0.4),5,3);R(1,9-Math.round(ll*0.4),5,3);}
   // Boot highlight
   ctx.fillStyle=lighten(boots,.18);
-  R(-5,9+Math.round(ll*0.4),3,1); R(2,9-Math.round(ll*0.4),3,1);
+  if(riding){R(-8,4,2,1);R(5,4,2,1);}else{R(-5,9+Math.round(ll*0.4),3,1);R(2,9-Math.round(ll*0.4),3,1);}
 
   // ════════════════════════════════════════
   // BACK ARMS (behind torso)

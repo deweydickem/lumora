@@ -12333,25 +12333,20 @@ function render(ts){
 }
 
 function updateVisualPosition(){
-  // Smooth sub-tile interpolation — visual position lerps toward tile position
-  const lerpSpeed = 0.28; // higher = snappier (0.1 = floaty, 0.3 = responsive)
+  // Constant-velocity sub-tile glide — reads as smooth continuous walking (no easing pulse)
+  const _now = performance.now();
+  const dt = Math.min(50, _now - (G._vpLast || _now)); G._vpLast = _now;
   if(G._snapCam){
     G._vx = G.player.x; G._vy = G.player.y;
   } else {
-    G._vx += (G.player.x - G._vx) * lerpSpeed;
-    G._vy += (G.player.y - G._vy) * lerpSpeed;
-    // Snap if very close (prevent infinite micro-drift)
-    if(Math.abs(G.player.x - G._vx) < 0.01) G._vx = G.player.x;
-    if(Math.abs(G.player.y - G._vy) < 0.01) G._vy = G.player.y;
+    const _mi = G._mounted ? Math.round(MOVE_INTERVAL/1.3) : MOVE_INTERVAL;
+    const step = dt / _mi; // exactly one tile per step interval = constant speed
+    const ddx = G.player.x - G._vx, ddy = G.player.y - G._vy;
+    if(Math.abs(ddx) <= step) G._vx = G.player.x; else G._vx += (ddx>0?1:-1)*step;
+    if(Math.abs(ddy) <= step) G._vy = G.player.y; else G._vy += (ddy>0?1:-1)*step;
   }
-  // Update walk animation phase (continuous, not step-based)
   const isMoving = Math.abs(G.player.x - G._vx) > 0.02 || Math.abs(G.player.y - G._vy) > 0.02;
-  if(isMoving) {
-    G._walkPhase += 0.06;
-  } else {
-    // Settle walk phase smoothly to rest
-    G._walkPhase *= 0.9;
-  }
+  if(isMoving) { G._walkPhase += 0.06; } else { G._walkPhase *= 0.9; }
 }
 
 function updateCamera(){
@@ -12364,8 +12359,8 @@ function updateCamera(){
   if(G._snapCam){
     G.cam.x=cx; G.cam.y=cy; G._snapCam=false;
   } else {
-    G.cam.x+=(cx-G.cam.x)*.1;
-    G.cam.y+=(cy-G.cam.y)*.1;
+    G.cam.x+=(cx-G.cam.x)*.18;
+    G.cam.y+=(cy-G.cam.y)*.18;
   }
 }
 

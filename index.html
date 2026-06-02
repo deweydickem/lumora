@@ -5855,7 +5855,7 @@ function connectSocket() {
     let p = G.otherPlayers.get(data.playerId);
     if (!p) {
       // Player we didn't know about — add them
-      p = { playerId: data.playerId, username: data.username||'Player', x: data.x, y: data.y, dir: data.dir||2, step: 0, chatBubble: null, followingPet: data.followingPet||null };
+      p = { playerId: data.playerId, username: data.username||'Player', x: data.x, y: data.y, dir: data.dir||2, step: 0, chatBubble: null, followingPet: data.followingPet||null, appearance: data.appearance||null };
       G.otherPlayers.set(data.playerId, p);
       updateOnlineCount();
     } else {
@@ -5908,7 +5908,7 @@ function connectSocket() {
 
   socket.on('farm:player_joined', data => {
     if(data.playerId === G.playerId) return;
-    G.otherPlayers.set(data.playerId, { username: data.username, x: data.x||FOX+2, y: data.y||FOY+2, dir: 2, step: 0, chatBubble: null });
+    G.otherPlayers.set(data.playerId, { username: data.username, x: data.x||FOX+2, y: data.y||FOY+2, dir: 2, step: 0, chatBubble: null, appearance: data.appearance||null });
     addChat('Farm', data.username + ' arrived on the farm 👋', 'sys');
     updateOnlineCount();
   });

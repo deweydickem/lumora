@@ -2340,6 +2340,7 @@ window._FT=[];
       <div id="hud-trade" onclick="openGamePopup('trading')" title="Trading Post (T)">⚖️</div>
       <div id="hud-quests" onclick="openGamePopup('quests')" title="Quests (Q)">📜</div>
       <div id="hud-skills" onclick="toggleSkillsOverlay()" title="Skills (K)" style="color:#B8A5D1;border-color:#3D3470">⭐</div>
+      <div id="hud-mount" onclick="toggleMount()" title="Mount horse (Y)" style="display:none">🐴</div>
       <div style="position:relative">
         <div id="hud-music" onclick="toggleMusic()" oncontextmenu="event.preventDefault();toggleVolSlider()" title="Music (right-click for volume)">♪</div>
         <div id="vol-wrap">
@@ -5694,6 +5695,7 @@ const G = {
   _walkPhase: 0, // continuous walk animation phase
   _petFollowing: false,
   _followingPet: null,
+  _mounted: false,
   _farmTransitioning: false,   // key of the ONE pet currently following
   hunting: { active: false },
   fishing: { active: false, casting: false, castTimer: 0 },
@@ -5855,11 +5857,11 @@ function connectSocket() {
     let p = G.otherPlayers.get(data.playerId);
     if (!p) {
       // Player we didn't know about — add them
-      p = { playerId: data.playerId, username: data.username||'Player', x: data.x, y: data.y, dir: data.dir||2, step: 0, chatBubble: null, followingPet: data.followingPet||null, appearance: data.appearance||null };
+      p = { playerId: data.playerId, username: data.username||'Player', x: data.x, y: data.y, dir: data.dir||2, step: 0, chatBubble: null, followingPet: data.followingPet||null, appearance: data.appearance||null, mounted: data.mounted||false };
       G.otherPlayers.set(data.playerId, p);
       updateOnlineCount();
     } else {
-      p.x = data.x; p.y = data.y; p.dir = data.dir; p.step++; p.followingPet = data.followingPet||null;
+      p.x = data.x; p.y = data.y; p.dir = data.dir; p.step++; p.followingPet = data.followingPet||null; p.mounted = data.mounted||false;
       if(data.username) p.username = data.username;
     }
   });
@@ -12186,6 +12188,7 @@ function render(ts){
 
   // Other players (only in world and farm modes — hide inside buildings/house/biomes)
   if (G.mode === 'world' || G.mode === 'farm') G.otherPlayers.forEach((p,id) => {
+    if (p.mounted) { try { drawPixelHorse(px(p.x)+T/2, py(p.y)+T-6, (p.dir===3?-1:1), false, p.step||0); } catch(e){} }
     drawChar(p.x,p.y,(p.appearance&&p.appearance.shirt)||'#a060e0',p.dir||2,p.step||0,p.username||'Player','',p.chatBubble||null,p.appearance||null);
     // Draw their following pet trailing behind them
     if (p.followingPet && PETS_DEF[p.followingPet]) {
@@ -12254,6 +12257,7 @@ function render(ts){
   }
   // Resource node interaction hints (trees, rocks, fish spots)
   try { drawResourceHints(); } catch(e) {}
+  if (G._mounted) { try { drawPixelHorse(px(G._vx)+T/2, py(G._vy)+T-6, (G.player.dir===3?-1:1), false, G._walkPhase||0); } catch(e){} }
   drawChar(G._vx,G._vy,(G.appearance&&G.appearance.shirt)||'#e87040',G.player.dir,G._walkPhase,G.username,G.player.emote,G.chatBubble,G.appearance||null);
   // Draw following pet in any mode
   if (G._petFollowing && G._followingPet) drawFollowingPet();
@@ -12365,6 +12369,7 @@ document.addEventListener('keydown',e=>{
   // M key — hold to show world map overlay
   if(e.key==='m'||e.key==='M'){G._showWorldMap=true;return;}
   // P key — open pet companion menu
+  if((e.key==='y'||e.key==='Y')){ toggleMount(); return; }
   if((e.key==='p'||e.key==='P') && G.activePets && G.activePets.length){showPetInteractMenu();return;}
   if(e.key==='e'||e.key==='E'||e.key===' '){
     if (G_actionLocked) { if(e.key===' ') e.preventDefault(); return; } // busy with action
@@ -12529,7 +12534,8 @@ setInterval(()=>{
   if(G_actionLocked) return; // locked during mining/chopping/fishing animation
   let moved=false;
   const _now = Date.now();
-  const canMove = (_now - _lastMoveTick) >= MOVE_INTERVAL;
+  if(G._mounted && (G.mode==='house'||G.mode==='building')){ G._mounted=false; var _mbx=document.getElementById('hud-mount'); if(_mbx) _mbx.classList.remove('act'); }
+  const canMove = (_now - _lastMoveTick) >= (G._mounted ? Math.round(MOVE_INTERVAL/1.3) : MOVE_INTERVAL);
   for(const[k,[dx,dy,dir]] of Object.entries(MOVES)){
     if(G.keys[k]){
       if (!canMove) { G.player.dir = dir; break; } // face direction but don't move yet
@@ -12631,7 +12637,7 @@ setInterval(()=>{
     // Throttle movement broadcasts to 100ms
     const now = Date.now();
     if(socket && now - lastMoveEmit > 100){
-      socket.emit('player:move',{x:G.player.x,y:G.player.y,dir:G.player.dir,followingPet:G._followingPet||null});
+      socket.emit('player:move',{x:G.player.x,y:G.player.y,dir:G.player.dir,followingPet:G._followingPet||null,mounted:G._mounted||false});
       lastMoveEmit = now;
     }
   }
@@ -14977,7 +14983,19 @@ document.getElementById('chatinput').addEventListener('keydown',e=>{
 // ═══════════════════════════════════════════════════════════════════════════════
 // UI UPDATE
 // ═══════════════════════════════════════════════════════════════════════════════
+function ownsHorse(){ return (G.farmAnimals||[]).some(function(a){ return a.type==='horse'; }); }
+function toggleMount(){
+  if(G.mode==='house'||G.mode==='building'){ notify('Can\'t ride indoors','bad'); return; }
+  if(!G._mounted && !ownsHorse()){ notify('\uD83D\uDC34 You need a horse \u2014 buy one from the Livestock Dealer','bad'); return; }
+  G._mounted=!G._mounted;
+  notify(G._mounted?'\uD83D\uDC34 Mounted! +30% speed':'Dismounted', G._mounted?'good':'');
+  var mb=document.getElementById('hud-mount'); if(mb) mb.classList.toggle('act',G._mounted);
+  try{ if(typeof socket!=='undefined'&&socket&&socket.connected){ socket.emit('player:move',{x:G.player.x,y:G.player.y,dir:G.player.dir,followingPet:G._followingPet||null,mounted:G._mounted}); } }catch(e){}
+  updateUI();
+}
+window.toggleMount=toggleMount;
 function updateUI(){
+  try { var _mb=document.getElementById('hud-mount'); if(_mb) _mb.style.display = ownsHorse()?'':'none'; } catch(e){}
   document.getElementById('st-seeds').textContent=G.seeds;
   document.getElementById('st-gold').textContent=G.gold;
   document.getElementById('st-lumi').textContent=G.lumi.toFixed(3);
@@ -18327,8 +18345,11 @@ function initJoystick() {
     cx = tx; cy = ty;
     showJoy(tx - zr.left, ty - zr.top);
     if (moveInterval) clearInterval(moveInterval);
+    var _jLast = 0;
     moveInterval = setInterval(() => {
       if (!active || !G.running) return;
+      var _gi = G._mounted ? 115 : 150; var _tn = Date.now();
+      if (_tn - _jLast < _gi) return; _jLast = _tn;
       let moved = false;
       if (Math.abs(jdx) > Math.abs(jdy)) {
         if (jdx > threshold) { tryMove(1,0,1); moved=true; }
@@ -18338,7 +18359,7 @@ function initJoystick() {
         else if (jdy < -threshold) { tryMove(0,-1,0); moved=true; }
       }
       if (moved) updateMobileContext();
-    }, 150);
+    }, 50);
   }
 
   function moveJoy(tx, ty) {
@@ -18391,7 +18412,7 @@ function initJoystick() {
     const _blocked = _blockedHouse || _blockedFarm || _blockedWorld || _blockedForest || _blockedMines || _blockedBeach || _blockedBldg || _blockedSwamp || _blockedMountain || _blockedVillage || _blockedDesert || _blockedTundra || _blockedVolcano || _blockedDungeon || _blockedOcean || _blockedNPC;
     if (nx>=_minXY && nx<_moveW-_minXY && ny>=_minXY && ny<_moveH-_minXY && !_blocked) {
       G.player.x=nx; G.player.y=ny; G.player.dir=dir; G.player.step++;
-      if (socket) socket.emit('player:move',{x:nx,y:ny,dir});
+      if (socket) socket.emit('player:move',{x:nx,y:ny,dir,followingPet:G._followingPet||null,mounted:G._mounted||false});
       // Zone transitions (mirrors desktop checks)
       if(G.mode==='world' && nx <= 1 && ny >= 18 && ny <= 22 && !G._farmTransitioning) { enterFarm(G.playerId); }
       else if(G.mode==='world' && ny <= 1) { enterForest(); }

@@ -11967,15 +11967,10 @@ function drawActionAnims() {
     ctx.translate(sx + shakeX, sy + shakeY);
     ctx.rotate(dirAngle);
     // Pivot offset: slightly toward target and above center in canonical space
-    const pvX = 3;
-    const pvY = 3;
+    const pvX = 6;
+    const pvY = -6;
     const tipX = pvX + Math.cos(swingAngle) * pickLen;
     const tipY = pvY + Math.sin(swingAngle) * pickLen;
-    // Arm connecting body to the tool grip (so it reads as held, not floating)
-    ctx.strokeStyle = (G.appearance && G.appearance.skin) || '#c8a87a';
-    ctx.lineWidth = 4; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(-4,-8); ctx.lineTo(pvX,pvY); ctx.stroke();
-    ctx.lineCap='butt';
     // Thick wooden handle
     const _pickHandleCol = _tsSkinPick ? _tsSkinPick.colors.handle : '#6B4226';
     const _pickHeadCol = _tsSkinPick ? _tsSkinPick.colors.head : '#4a4a55';
@@ -12060,14 +12055,10 @@ function drawActionAnims() {
       ctx.save();
       ctx.translate(sx, sy);
       ctx.rotate(dirAngle);
-      const pvX = 2;
-      const pvY = 3;
+      const pvX = 5;
+      const pvY = -6;
       const aTipX = pvX + Math.cos(swingAngle) * axeLen;
       const aTipY = pvY + Math.sin(swingAngle) * axeLen;
-      ctx.strokeStyle = (G.appearance && G.appearance.skin) || '#c8a87a';
-      ctx.lineWidth = 4; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(-4,-8); ctx.lineTo(pvX,pvY); ctx.stroke();
-      ctx.lineCap='butt';
       // Handle
       const _axeHandleCol = _tsSkinAxe ? _tsSkinAxe.colors.handle : '#8B5E3C';
       const _axeHeadCol = _tsSkinAxe ? _tsSkinAxe.colors.head : '#888';

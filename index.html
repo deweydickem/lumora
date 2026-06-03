@@ -5075,7 +5075,7 @@ const SKILL_UNLOCKS_EXT = {
   lumbering: {
     5:  { label:'Wood: +1 guaranteed per chop',       apply:()=>{ G.skillBonuses.woodBonus=1; } },
     10: { label:'Tree respawn 10min → 7min',          apply:()=>{ G.skillBonuses.treeRespawn=7*60*1000; } },
-    20: { label:'Ranger Bob catch 15% → 5%',          apply:()=>{ G.skillBonuses.rangerChance=0.05; } },
+    20: { label:'Fern catch 15% → 5%',          apply:()=>{ G.skillBonuses.rangerChance=0.02; } },
     25: { label:'1% chance: Ancient Wood drop',       apply:()=>{ G.skillBonuses.ancientWoodChance=0.01; } },
     35: { label:'0.5% chance: Enchanted Branch drop', apply:()=>{ G.skillBonuses.enchantedBranchChance=0.005; } },
     50: { label:'★ Master Lumberjack — 2× wood yield', apply:()=>{ G.skillBonuses.woodMultiplier=2; } },
@@ -5283,7 +5283,7 @@ const STORE_TABS = {
   license: [
     { id:'huntingLicense', icon:'🔫📋', name:'Hunting License', price:80,  desc:'Hunt legally. Without it: 30% chance Officer Dale confiscates your shotgun and ammo + fine.', seasonal:true },
     { id:'fishingLicense', icon:'🎣📋', name:'Fishing License', price:40,  desc:'Fish legally. Without it: 30% chance of confiscation + fine.', seasonal:true },
-    { id:'timberPermit',   icon:'🪓📋', name:'Timber Permit',   price:30,  desc:'Chop trees freely. Without it: small chance Ranger Bob confiscates your axe.', seasonal:true },
+    { id:'timberPermit',   icon:'🪓📋', name:'Timber Permit',   price:30,  desc:'Chop trees freely. Without it, Fern the forest ranger may stop by with a friendly reminder.', seasonal:true },
   ],
   expedition: [
     { id:'sailboat', icon:'⛵', name:'Sailboat', price:500, desc:'A sturdy vessel for crossing open waters. Required to reach the Azuremist Archipelago from Tidecrest Village.', oneTime:true },
@@ -5616,7 +5616,7 @@ const G = {
                   fishCatchRate:0.65, fishCastSpeed:1, fishPearlChance:0, fishCoinChance:0,
                   huntingCatchRate:0.5, woodBonus:0, woodMultiplier:1, treeRespawn:600000,
                   stoneBonus:0, stoneMultiplier:1, ancientWoodChance:0, enchantedBranchChance:0,
-                  rangerChance:0.15, daleChance:0.45 },
+                  rangerChance:0.05, daleChance:0.45 },
 
   // Quests (local tracking — synced to server on claim)
   qstats: {harvested:0,watered:0,tilled:0,planted:0,bmSales:0,totalHarvested:0,treesChopped:0,rocksMined:0,fishCaught:0,birdsShot:0,crafted:0,goldSold:0,foraged:0,animalsFed:0,cropTypes:0,totalActions:0,totalSold:0,cropTypesOwned:0,uniqueRecipes:0,totalGoldEarned:0,animalsOwned:0,skillsAt10:0,weeklyHarvested:0,weeklyGoldSold:0,weeklyForaged:0,weeklyCrafted:0,weeklyGathered:0,questsClaimed:0},
@@ -16544,7 +16544,7 @@ function tryGather(forceChop) {
         G.qstats.weeklyGathered=(G.qstats.weeklyGathered||0)+wood;
         var lvlUps = awardXP('lumbering', _cDef.xp);
         lvlUps.forEach(function(lu){ applySkillUnlocks('lumbering', lu.newLevel); handleLevelUps([lu]); });
-        if (!G.gear.timberPermit && Math.random() < (G.skillBonuses.rangerChance||0.15)) {
+        if (!G.gear.timberPermit && Math.random() < (G.skillBonuses.rangerChance||0.05)) {
           setTimeout(function(){rangerBob();},2000);
         }
         checkQuests(); updateUI();
@@ -16577,7 +16577,7 @@ function tryGather(forceChop) {
           G.qstats.treesChopped=(G.qstats.treesChopped||0)+1;G.qstats.totalActions=(G.qstats.totalActions||0)+1;G.qstats.weeklyGathered=(G.qstats.weeklyGathered||0)+wood;
           const lvlUps = awardXP('lumbering', 10);
           lvlUps.forEach(lu => { applySkillUnlocks('lumbering', lu.newLevel); handleLevelUps([lu]); });
-          if (!G.gear.timberPermit && rollDice('ranger') < (G.skillBonuses.rangerChance||0.15)) {
+          if (!G.gear.timberPermit && rollDice('ranger') < (G.skillBonuses.rangerChance||0.05)) {
             setTimeout(()=>rangerBob(),2000);
           }
           checkQuests(); updateUI();
@@ -16813,7 +16813,7 @@ function tryGather(forceChop) {
         G.qstats.treesChopped=(G.qstats.treesChopped||0)+1;G.qstats.totalActions=(G.qstats.totalActions||0)+1;G.qstats.weeklyGathered=(G.qstats.weeklyGathered||0)+wood;checkQuests();
         const woodLevelUps = awardXP('lumbering', 10);
         woodLevelUps.forEach(lu => { applySkillUnlocks('lumbering', lu.newLevel); handleLevelUps([lu]); });
-        if(!G.gear.timberPermit && rollDice('ranger') < (G.skillBonuses.rangerChance||0.15)) {
+        if(!G.gear.timberPermit && rollDice('ranger') < (G.skillBonuses.rangerChance||0.05)) {
           setTimeout(()=>rangerBob(),2000);
         }
         updateUI();
@@ -16976,10 +16976,10 @@ function daleConfiscation(tx, ty, tdef) {
 
 function rangerBob() {
   var _dm = document.getElementById('dale-msg');
-  if(_dm) _dm.textContent = "Ranger Bob here. Chopping without a timber permit, eh? I'll let it slide this time \u2014 grab one at the General Store when you can.";
+  if(_dm) _dm.textContent = "Fern here. Chopping without a timber permit, eh? I'll let it slide this time \u2014 grab one at the General Store when you can.";
   var _da = document.getElementById('dale-alert'); if(_da) _da.classList.add('show');
-  addChat('Ranger Bob','Friendly heads-up \u2014 a timber permit keeps it legal. Carry on, friend.','sys');
-  notify('\uD83C\uDF32 Ranger Bob gave you a friendly warning.','');
+  addChat('Fern','Friendly heads-up \u2014 a timber permit keeps it legal. Carry on, friend.','sys');
+  notify('\uD83C\uDF32 Fern gave you a friendly warning.','');
   updateUI();
 }
 

@@ -12481,10 +12481,8 @@ document.addEventListener('keydown',e=>{
     if (ZONE_NPCS && ZONE_NPCS[G.mode]) {
       const znpc = ZONE_NPCS[G.mode].find(n => Math.abs(G.player.x-n.x)<=2 && Math.abs(G.player.y-n.y)<=2);
       if (znpc) {
-        const msg = znpc.msgs[Math.floor(Math.random() * znpc.msgs.length)];
-        znpc.chatBubble = { text: msg, timer: bubbleTimer(msg) };
-        addChat(znpc.name, msg);
-        // NPC chat — no XP (socializing skill removed)
+        if (typeof openGiftMenu === 'function') { openGiftMenu(znpc.name); }
+        else { const msg = znpc.msgs[Math.floor(Math.random()*znpc.msgs.length)]; znpc.chatBubble = { text: msg, timer: bubbleTimer(msg) }; addChat(znpc.name, msg); }
         if(e.key===' ') e.preventDefault(); return;
       }
     }
@@ -14895,7 +14893,7 @@ async function getNPCReply(npc,msg){
   showTyping(npc.name,npc.col);
   const ctx=`Season: ${G.season}. Gold: ${G.gold}. Seeds: ${G.seeds}. LUMI: ${G.lumi.toFixed(3)}. Plots ready: ${G.plots.filter(p=>p.state==='READY').length}. Block mult: ${G.blockMult.toFixed(2)}x.`;
   // Enriched payload — server's buildNpcSystemPrompt uses these for tier-gated, memory-aware responses
-  const hearts = (npc.relationship && npc.relationship.hearts) || npc.hearts || 0;
+  const hearts = (G.relationships && G.relationships[npc.name] && G.relationships[npc.name].hearts) || (npc.relationship && npc.relationship.hearts) || npc.hearts || 0;
   const tier = (typeof getRelationshipTier === 'function') ? getRelationshipTier(hearts) : 0;
   const memories = (typeof NPC_WORLD !== 'undefined' && NPC_WORLD[npc.name])
     ? (NPC_WORLD[npc.name].memories || []).slice(-5)
@@ -15024,10 +15022,13 @@ function sendChat(){
   const inp=document.getElementById('chatinput');
   const v=inp.value.trim();if(!v) return;
   inp.value='';
-  const mentionMatch=v.match(/^@(Deb|Todd|Tammy|Dale)\s+(.+)/i);
+  const mentionMatch=v.match(/^@(\w+)\s+(.+)/i);
   if(mentionMatch){
     addChat(G.username,v,'you');
-    const target=G.npcs.find(n=>n.name.toLowerCase()===mentionMatch[1].toLowerCase());
+    const _mn=mentionMatch[1].toLowerCase();
+    let target=(G.npcs||[]).find(n=>n.name&&n.name.toLowerCase()===_mn);
+    if(!target && typeof ZONE_NPCS!=='undefined'){ for(const _z in ZONE_NPCS){ const _f=ZONE_NPCS[_z].find(n=>n.name&&n.name.toLowerCase()===_mn); if(_f){ target=_f; break; } } }
+    if(!target && typeof BLD_NPCS!=='undefined'){ for(const _b in BLD_NPCS){ const _n=BLD_NPCS[_b]; if(_n&&_n.name&&_n.name.toLowerCase()===_mn){ target=_n; break; } } }
     if(target) {
       setTimeout(()=>getNPCReply(target,mentionMatch[2]),400+Math.random()*600);
       // socializing XP removed
@@ -17035,6 +17036,16 @@ const NPC_WORLD = {
     goals: ['keep the peace', 'watch the roads at night', 'make sure nobody goes hungry this winter'],
     catchphrases: ['eyes open', 'trouble keeps its own schedule', 'a quiet town is a healthy town'],
   },
+  Fern: {
+    mood: 0.6,
+    energy: 0.45,
+    relationships: { Deb: 0.6, Tammy: 0.65, Moss: 0.5, Dale: 0.4 },
+    recentTopics: [],
+    lastSpoke: 0,
+    personality: 'quiet forest ranger of few words. Speaks softly and watches closely. Knows every tree by name and believes the forest is alive and remembers. Protective of the old growth, gently wary of careless axes, kind beneath the reserve.',
+    goals: ['protect the old growth', 'teach newcomers to chop with respect', 'understand what the deer keep watching at the treeline'],
+    catchphrases: ['the forest remembers', 'chop wisely', 'listen, the canopy is speaking'],
+  },
 };
 
 // Add a world event that all NPCs can reference
@@ -17207,7 +17218,7 @@ function scheduleNPCConversation() {
 // NPC ENGINE v2 — memory, backstory, secrets, prewritten dialogue
 // ═══════════════════════════════════════════════════════════════════════════════
 const NPC_MEMORY_KEY = 'lumora_npc_memory';
-const NPC_NAME_LIST  = ['Deb','Todd','Tammy','Dale'];
+const NPC_NAME_LIST  = ['Deb','Todd','Tammy','Dale','Fern'];
 
 // ── Backstories (tiered reveals) ─────────────────────────────────────────────
 const NPC_BACKSTORIES = {
@@ -17234,6 +17245,12 @@ const NPC_BACKSTORIES = {
     tier2: "Used to be a ranger up north. Left that life when the things in the woods started looking back. Havenfield's quieter. Mostly.",
     tier3: "I lost a partner on patrol, years back. Never found the body. Some nights the wind off the river sounds like her voice.",
     tier4: "There's a door at the bottom of the old well. Nobody opens it. I know because I check, every first frost. Whatever's on the other side... it knows my name.",
+  },
+  Fern: {
+    tier1: "I've walked these woods longer than the town's had its name. Every tree here, I know by the sound it makes in the wind.",
+    tier2: "I plant more than anyone is ever allowed to cut. For every axe that swings without a permit, I put two saplings in the dark where no one thinks to look.",
+    tier3: "I had a sister. We rangered together up north \u2014 the same post Dale won't admit he worked. She walked into the deep wood one autumn and only her coat came back. I came south to forget. The trees here won't let me.",
+    tier4: "There's a clearing past the old oaks that isn't on any map. The deer gather there at the new moon and face inward, like they're waiting on something. I've stood at its edge. Whatever the forest remembers... it remembers there.",
   },
 };
 
@@ -17367,6 +17384,32 @@ const NPC_DIALOGUE_POOLS = {
     secrets: [
       "Somebody's been moving goods past the south gate after midnight. I'm watching.",
       "The old well rings wrong when the frost comes in. I don't drink from it.",
+    ],
+  },
+  Fern: {
+    greetings: [
+      "The canopy rustled before you stepped through, {player}. The woods announce their guests.",
+      "Mind the moss \u2014 it's older than the both of us.",
+      "Quiet today. Even the jays are listening.",
+    ],
+    seasonal: {
+      SPRING: ["The saplings are waking. Step softly between them.","Green returns to the deadwood. The forest forgives, slowly."],
+      SUMMER: ["The shade runs deep this time of year. Rest a while if you need it.","The old oaks drink hard in the heat. Leave them the river's edge."],
+      AUTUMN: ["The leaves are letting go. Beautiful, and a little sad.","Mushrooms hide in the moss now. Some feed you. Some don't. Learn which."],
+      WINTER: ["Bare branches, clear truth. The wood shows its bones in winter.","Tracks last in the frost. I can read who's passed, and who shouldn't have."],
+    },
+    reactions: {
+      highHarvest: ["You take only what you tend. The forest notices that."],
+      lowHarvest: ["Lean seasons teach patience. The roots are still working, unseen."],
+      diamondFound: ["Stone-light, from under the hills. Pretty enough. The trees prefer rain."],
+      goldFound: ["Shiny things. The magpies and the merchants can have them."],
+      seasonChange: ["The wheel turns. The wood always knows before the calendar does."],
+      playerLevelUp: ["You move quieter than when you arrived. Good. The woods trust the careful."],
+    },
+    secrets: [
+      "Plant a sapling beside an old stump \u2014 the buried roots will feed it. The forest shares with the patient.",
+      "The deer trail past the third oak leads somewhere I don't speak of after dark.",
+      "Dale and I knew the same woods once, in another life. Ask him about the north sometime. Or don't.",
     ],
   },
 };

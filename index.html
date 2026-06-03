@@ -15452,6 +15452,8 @@ async function startGame(){
       });
     }
     if(farmData.bonuses) Object.assign(G.skillBonuses, farmData.bonuses);
+    // Retired the permit-cop confiscation: give back an axe that was taken from a player who clearly earned it.
+    try { if (!G.gear.axe && G.skills && G.skills.lumbering && G.skills.lumbering.level > 1) G.gear.axe = true; } catch(e) {}
 
     // Load game state (season etc)
     const stateRes = await fetch(SERVER+'/health');
@@ -16959,40 +16961,25 @@ function tryGather(forceChop) {
 
 // ── Dale Confiscation — penalty for chopping fruit trees ──
 function daleConfiscation(tx, ty, tdef) {
-  var fine = 100 + Math.floor(Math.random()*200);
-  // Take axe
-  G.gear.axe = false;
-  // Take gold (min 0)
-  var actualFine = Math.min(fine, G.gold);
-  G.gold -= actualFine;
-  // Dramatic notification sequence
-  notify('🚨 HALT! Officer Dale approaches!','bad');
+  notify('\uD83D\uDC6E Officer Dale wanders over...','');
   setTimeout(function(){
-    notify('👮 Dale: "You can\'t chop fruit trees! That\'s community property!"','bad');
-  }, 1500);
+    notify('\uD83D\uDC6E Dale: "Easy on the fruit trees, friend \u2014 those are community property."','');
+  }, 1400);
   setTimeout(function(){
-    notify('👮 Dale confiscated your axe and fined you '+actualFine+'◈!','bad');
-    addParticle(G.player.x, G.player.y, '🪓', 18);
-    addParticle(G.player.x, G.player.y, '💸', 16);
-    // Shake the tree dramatically
-    shakeAnims.set(tx+','+ty, {start:Date.now(), dur:1200});
+    addParticle(G.player.x, G.player.y, '\uD83D\uDC6E', 14);
+    shakeAnims.set(tx+','+ty, {start:Date.now(), dur:600});
     updateUI();
-  }, 3000);
-  // Track for quests/stats
+  }, 2600);
   G.qstats.daleEncounters = (G.qstats.daleEncounters||0) + 1;
   scheduleSave();
 }
 
 function rangerBob() {
-  const fine = Math.min(G.gold, 25);
-  G.gold -= fine;
-  G.gear.axe = false;
-  document.getElementById('dale-msg').textContent =
-    'Ranger Bob here. No timber permit! Axe confiscated.' + (fine>0?' '+fine+'◈ fine.':' Consider this a warning.');
-  document.getElementById('dale-alert').classList.add('show');
-  addChat('Ranger Bob','No permit, no axe. Come back when you follow the rules.','bad');
-  G.dalePunishing = true;
-  notify('🌲 Ranger Bob caught you!','bad');
+  var _dm = document.getElementById('dale-msg');
+  if(_dm) _dm.textContent = "Ranger Bob here. Chopping without a timber permit, eh? I'll let it slide this time \u2014 grab one at the General Store when you can.";
+  var _da = document.getElementById('dale-alert'); if(_da) _da.classList.add('show');
+  addChat('Ranger Bob','Friendly heads-up \u2014 a timber permit keeps it legal. Carry on, friend.','sys');
+  notify('\uD83C\uDF32 Ranger Bob gave you a friendly warning.','');
   updateUI();
 }
 

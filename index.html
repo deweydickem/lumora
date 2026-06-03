@@ -9542,6 +9542,33 @@ function triggerLegendaryJuice() {
   }
 }
 
+function spawnXpDrop(skill, amount){
+  if(!amount || amount<=0) return;
+  var def = (typeof SKILL_DEFS!=='undefined') ? SKILL_DEFS[skill] : null; if(!def) return;
+  if(!G._xpDrops) G._xpDrops=[];
+  var n=0; for(var i=0;i<G._xpDrops.length;i++){ if(G._xpDrops[i].age<10) n++; }
+  G._xpDrops.push({ icon:def.icon, col:def.color, amt:Math.round(amount),
+    x:(typeof G._vx==='number'?G._vx:G.player.x), y:(typeof G._vy==='number'?G._vy:G.player.y),
+    age:0, ox:(Math.random()*14-7), oy:-(n%4)*13 });
+  if(G._xpDrops.length>40) G._xpDrops.shift();
+}
+function drawXpDrops(){
+  if(!G._xpDrops || !G._xpDrops.length) return;
+  ctx.save(); ctx.textAlign='center'; ctx.font="bold 14px 'VT323',monospace";
+  for(var i=G._xpDrops.length-1;i>=0;i--){
+    var d=G._xpDrops[i]; d.age++;
+    var tt=d.age/72;
+    if(tt>=1){ G._xpDrops.splice(i,1); continue; }
+    var sx=px(d.x)+T/2+d.ox;
+    var sy=py(d.y)-12+d.oy-tt*36;
+    var a=tt<0.12?(tt/0.12):(1-(tt-0.12)/0.88);
+    ctx.globalAlpha=Math.max(0,a);
+    var txt='+'+d.amt+' '+d.icon;
+    ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillText(txt,sx+1,sy+1);
+    ctx.fillStyle=d.col; ctx.fillText(txt,sx,sy);
+  }
+  ctx.globalAlpha=1; ctx.restore();
+}
 function drawConfetti() {
   if (!G._confetti || !G._confetti.length) return;
   for (let i = G._confetti.length - 1; i >= 0; i--) {
@@ -12313,6 +12340,7 @@ function render(ts){
   drawActionAnims();
   drawParticles();
   try { drawConfetti(); } catch(e) {}
+  try { drawXpDrops(); } catch(e) {}
   // Atmosphere layers (drawn on top of everything)
   try { drawDayNightOverlay(); } catch(e) {}
   try { drawAmbientParticles(); } catch(e) {}
@@ -13993,6 +14021,7 @@ function toggleSkillsOverlay() {
 
 function handleLevelUps(levelUps){
   if(!levelUps||!levelUps.length) return;
+  try { playSfx('levelup'); } catch(e) {}
   levelUps.forEach(lu=>{
     const def=SKILL_DEFS[lu.skill];
     if(!def) return;
@@ -15048,6 +15077,8 @@ function playSfx(type){
       o.start(t+delay); o.stop(t+delay+dur+0.03);
     }
     if(type==='mount'){ note(300,520,0.10,0,0.14); note(520,440,0.13,0.10,0.14); }
+    else if(type==='levelup'){ note(523,523,0.11,0,0.15); note(659,659,0.11,0.10,0.15); note(784,784,0.11,0.20,0.15); note(1047,1047,0.34,0.30,0.18); }
+    else if(type==='quest'){ note(659,659,0.12,0,0.15); note(880,880,0.12,0.12,0.16); note(1175,1175,0.32,0.26,0.16); }
     else { note(480,250,0.16,0,0.12); }
   } catch(e){}
 }
@@ -21108,6 +21139,7 @@ function awardXP(skill, amount) {
   if (!G.skills[skill]) G.skills[skill] = {xp:0,level:1};
   const sk = G.skills[skill];
   sk.xp += amount;
+  try{ spawnXpDrop(skill, amount); }catch(e){}
   const levelUps = [];
   while (sk.level < 50) {
     const needed = XP_TABLE_50[sk.level + 1];
